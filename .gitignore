@@ -1,0 +1,16 @@
+*.log
+*.pot
+*.pyc
+local_settings.py
+.project
+.pydevproject
+.my*
+*.swp
+*.sqlite
+.settings
+*.db
+*.ipynb
+dist
+financial_fundamentals.egg-info
+build
+*.egg-info
