@@ -59,6 +59,9 @@ class DataStoreDriverTest(object):
                                                 df=empty_df)
         assert_frame_equal(df_from_datastore, self.test_df, check_dtype=False)
         
+    def test_set(self):
+        self.data_store.set(metric=self.metric, df=self.test_df)
+        
         
 class MongoDriverTestCase(DataStoreDriverTest, unittest.TestCase):
     def test_read_frame(self):
