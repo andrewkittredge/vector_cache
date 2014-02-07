@@ -11,22 +11,46 @@ import vector_cache.mongo_driver as vc_mongo_driver
 import pymongo
 from pandas.util.testing import assert_frame_equal
 import operator
+import abc
 
 TEST_HOST, TEST_PORT = 'localhost', 27017
 
-def build_data_store(host=TEST_HOST, port=TEST_PORT, collection_name='test'):
-    client = pymongo.MongoClient(host, port)
-    db = client.test
-    collection = db[collection_name]
-    collection.drop()
-    data_store = vc_mongo_driver.MongoDataStore(collection=collection)
-    return data_store, collection
-
-class MongoDriverTestCase(unittest.TestCase):
+class DataStoreDriverTest(object):
+    __metaclass__ = abc.ABCMeta
+    
+    @abc.abstractmethod
+    def build_data_store(self):
+        return self.data_store, self.collection
+    
+    data_points = [
+           {'identifier' : 'a',
+                        'date' : datetime.datetime(2012, 12, 1),
+                        'price' : 1},
+           {'identifier' : 'a',
+                        'date' : datetime.datetime(2012, 12, 2),
+                        'price' : 2},
+           {'identifier' : 'a',
+                        'date' : datetime.datetime(2012, 12, 3),
+                        'price' : 3},
+           {'identifier' : 'b',
+                        'date' : datetime.datetime(2012, 12, 1),
+                        'price' : 100},
+           {'identifier' : 'b',
+                        'date' : datetime.datetime(2012, 12, 4),
+                        'price' : 110},
+           ]
+    @abc.abstractmethod
+    def _populate_collection(self):
+        self.test_df = pd.DataFrame(self.data_points).pivot(index='date',
+                                                            columns='identifier',
+                                                            values='price')
+        self.index = self.test_df.index
+        '''put data_points into data_store'''
+    
     def setUp(self):
-        self.data_store, self.collection = build_data_store()
+        self.data_store, self.collection = self.build_data_store()
         self._populate_collection()
-        
+
     def test_get(self):
         '''Get previously cached values.'''
         empty_df = pd.DataFrame(columns=['a', 'b'], index=self.index)
@@ -34,7 +58,9 @@ class MongoDriverTestCase(unittest.TestCase):
         df_from_datastore = self.data_store.get(metric='price',
                                                 df=empty_df)
         assert_frame_equal(df_from_datastore, self.test_df, check_dtype=False)
-    
+        
+        
+class MongoDriverTestCase(DataStoreDriverTest, unittest.TestCase):
     def test_read_frame(self):
         '''read a Dataframe from mongo.'''
         df = vc_mongo_driver.read_frame(qry={},
@@ -65,26 +91,16 @@ class MongoDriverTestCase(unittest.TestCase):
         self.assertEqual(len(records), operator.mul(*self.test_df.shape))
         
     def _populate_collection(self):
-        data_points = [
-                   {'identifier' : 'a',
-                                'date' : datetime.datetime(2012, 12, 1),
-                                'price' : 1},
-                   {'identifier' : 'a',
-                                'date' : datetime.datetime(2012, 12, 2),
-                                'price' : 2},
-                   {'identifier' : 'a',
-                                'date' : datetime.datetime(2012, 12, 3),
-                                'price' : 3},
-                   {'identifier' : 'b',
-                                'date' : datetime.datetime(2012, 12, 1),
-                                'price' : 100},
-                   {'identifier' : 'b',
-                                'date' : datetime.datetime(2012, 12, 4),
-                                'price' : 110},
-                   ]
-        for data_point in data_points:
+        super(MongoDriverTestCase, self)._populate_collections()
+        for data_point in self.data_points:
             self.collection.insert(data_point)
-        self.test_df = pd.DataFrame(data_points).pivot(index='date',
-                                                       columns='identifier',
-                                                       values='price')
-        self.index = self.test_df.index
+
+        
+    @classmethod
+    def build_data_store(cls, host=TEST_HOST, port=TEST_PORT, collection_name='test'):
+        client = pymongo.MongoClient(host, port)
+        db = client.test
+        collection = db[collection_name]
+        collection.drop()
+        data_store = vc_mongo_driver.MongoDataStore(collection=collection)
+        return data_store, collection
