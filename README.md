@@ -7,7 +7,7 @@ Caching for functions that return pandas DataFrames.
 	def foo(empty_df):
 	    print 'populating df'
 	    results = lengthy_caclulation(df.index, df.columns)
-	    empty_df.add(results)
+	    empty_df.update(results)
 	    return empty_df
 
 	required_data = pandas.DataFrame(index=[1, 2, 3, 4], columns=['a, 'b', 'c'])
