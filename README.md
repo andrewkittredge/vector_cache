@@ -6,7 +6,7 @@ Caching for functions that return pandas DataFrames.
 	@vector_cache
 	def foo(empty_df):
 	    print 'populating df'
-	    results = lengthy_caclulation(df.index, df.columns)
+	    results = lengthy_calculation(df.index, df.columns)
 	    empty_df.update(results)
 	    return empty_df
 
