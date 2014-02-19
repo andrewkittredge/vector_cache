@@ -13,6 +13,7 @@ from pandas.util.testing import assert_frame_equal
 import operator
 import abc
 
+
 TEST_HOST, TEST_PORT = 'localhost', 27017
 
 class DataStoreDriverTest(object):
@@ -60,10 +61,14 @@ class DataStoreDriverTest(object):
         assert_frame_equal(df_from_datastore, self.test_df, check_dtype=False)
         
     def test_set(self):
-        self.data_store.set(metric=self.metric, df=self.test_df)
+        self.data_store.set(metric='price', df=self.test_df)
         
         
 class MongoDriverTestCase(DataStoreDriverTest, unittest.TestCase):
+    def _populate_collection(self):
+        super(MongoDriverTestCase, self)._populate_collection()
+        for data_point in self.data_points:
+            self.collection.insert(data_point)
     def test_read_frame(self):
         '''read a Dataframe from mongo.'''
         df = vc_mongo_driver.read_frame(qry={},
@@ -93,10 +98,7 @@ class MongoDriverTestCase(DataStoreDriverTest, unittest.TestCase):
         records = list(collection.find())
         self.assertEqual(len(records), operator.mul(*self.test_df.shape))
         
-    def _populate_collection(self):
-        super(MongoDriverTestCase, self)._populate_collections()
-        for data_point in self.data_points:
-            self.collection.insert(data_point)
+
 
         
     @classmethod
@@ -107,3 +109,25 @@ class MongoDriverTestCase(DataStoreDriverTest, unittest.TestCase):
         collection.drop()
         data_store = vc_mongo_driver.MongoDataStore(collection=collection)
         return data_store, collection
+
+
+from vector_cache.sql_driver import SQLDataStore, CachedValue
+class SQLiteDriverTestCase(DataStoreDriverTest, unittest.TestCase):
+    metric = 'price'
+    def build_data_store(self):
+        self.data_store, self.session = memory_sql_store()
+        return self.data_store, self.session
+    
+    def _populate_collection(self):
+        super(SQLiteDriverTestCase, self)._populate_collection()
+        for data_point in self.data_points:
+            model = CachedValue(metric=self.metric,
+                                date=data_point['date'],
+                                identifier=data_point['identifier'],
+                                value=data_point['price'])
+            self.session.add(model)
+        self.session.commit()
+        
+def memory_sql_store():
+    data_store = SQLDataStore('sqlite:///:memory:')
+    return data_store, data_store._Session()

@@ -20,6 +20,7 @@ def treasury_yield(required_data):
     treasury_yield = pd.DataFrame.from_records(data=treasury_data)
     treasury_yield.set_index('date', inplace=True)
     required_data.update(treasury_yield)
+    required_data = required_data * 10 # zipline has their yields in tenths' of a percent??
     return required_data
 
 

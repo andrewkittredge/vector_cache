@@ -7,7 +7,7 @@ from functools import wraps
 import pandas as pd
 import numpy as np
 
-def build_vector_cache(data_store):
+def build_vector_cache(get_data_store):
     def vector_cache(user_function):
         '''Cache functions that build Pandas DataFrames.
         
@@ -17,7 +17,8 @@ def build_vector_cache(data_store):
         the new values to the cache.
         '''
         # When the function name or location changes you're going to have to re-cache everything, bummer.
-        metric = '.'.join((user_function.__module__, user_function.__name__)) 
+        metric = user_function.__name__ 
+        data_store = get_data_store()
         @wraps(user_function)
         def wrapper(required_data_df):
             cached_data = data_store.get(metric=metric,

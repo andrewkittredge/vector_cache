@@ -24,10 +24,14 @@ class CachedValue(Base):
     
 class SQLDataStore(object):
     def __init__(self, connection_string):
+        self._connection_string = connection_string
         engine = sqlalchemy.create_engine(connection_string)
         self._engine = engine
         CachedValue.metadata.create_all(self._engine)
         self._Session = sessionmaker(bind=engine)
+        
+    def __repr__(self):
+        return '{}({})'.format(self.__class__.__name__, self._connection_string)
 
     def get(self, metric, df):
         identifiers = list(df.columns)
